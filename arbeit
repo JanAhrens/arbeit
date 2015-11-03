@@ -1,0 +1,153 @@
+#!/usr/bin/env python
+
+import json
+import os
+import time
+from termcolor import colored
+import argparse
+from datetime import date
+from datetime import timedelta
+
+def db_file():
+    return os.environ["ARBEIT_PATH"] + "/arbeit.json"
+
+def load_db():
+    if os.path.isfile(db_file()):
+        return json.load(open(db_file()))
+    else:
+        return {
+            "lock_version": "1",
+            "dates": {}
+        }
+
+def write_db(db):
+    with open(db_file(), 'w') as outfile:
+        json.dump(db, outfile, indent=2, sort_keys=True)
+
+def today():
+    return time.strftime("%Y-%m-%d")
+
+def find_date(db, date):
+    try:
+        return db["dates"][date]
+    except KeyError:
+        return {"start": None, "end": None, "breaks": [], "comment": None}
+
+def replace_today(db, data):
+    db["dates"][today()] = data
+
+def hours_to_minutes(date):
+    parts = date.split(":")
+    return int(parts[0]) * 60 + int(parts[1])
+
+def minutes_to_hours(minutes):
+    return "%s%.2d:%.2d" % ("-" if minutes < 0 else "", abs(minutes) / 60, abs(minutes) % 60)
+
+def calculate_working_hours(date):
+    if (date["end"] == None) or (date["start"] == None):
+        return 0
+
+    duration = hours_to_minutes(date["end"]) - hours_to_minutes(date["start"])
+
+    breaks = 0
+    for b in date["breaks"]:
+        breaks += hours_to_minutes(b["end"]) - hours_to_minutes(b["start"])
+
+    return duration - breaks
+
+def finished(date):
+    return date["start"] and date["end"]
+
+def show_date(date):
+    print(" Start: %s" % (date["start"] if date["start"] else colored("missing", "red")))
+    print("   End: %s" % (date["end"] if date["end"] else colored("missing", "red")))
+    if len(date["breaks"]) > 0:
+        print
+        print("Breaks:")
+        for b in date["breaks"]:
+            if b["comment"]:
+                comment = " (%s)" % b["comment"]
+            else:
+                comment = ""
+            print("  %s - %s%s" % (b["start"], b["end"], comment))
+    print
+    if finished(date):
+        working_hours = calculate_working_hours(date)
+        print("= %s" % show_diff(working_hours, 8 * 60))
+    else:
+        print("Duration not available. Date not yet finished.")
+
+def show_diff(result, required):
+    difference = result - required
+    return "%s (%s)" % (
+        minutes_to_hours(result),
+        colored(minutes_to_hours(difference), 'green' if result > required else 'yellow')
+    )
+
+def show_today(args):
+    db = load_db()
+    print(time.strftime("%A, %d.%m.%Y"))
+    print
+    show_date(find_date(db, today()))
+
+def now():
+    return time.strftime("%H:%M")
+
+def set_time(time_field):
+    db = load_db()
+    d = find_date(db, today())
+    if d[time_field]:
+        print colored('%s time already set to %s' % (time_field.title(), d[time_field]), 'red')
+        exit(1)
+    else:
+        d[time_field] = now()
+    replace_today(db, d)
+    write_db(db)
+
+def set_end(args):
+    set_time('end')
+    print("That's all for today. Have a nice evening!")
+
+def set_start(args):
+    set_time('start')
+    print("Okay, let's get started!")
+
+def add_break(args):
+    print(colored("Not yet implemented", "yellow"))
+
+def calc_week(args):
+    db = load_db()
+    days_in_week = []
+    today = date.today()
+
+    for d in range(0, today.isoweekday()):
+        days_in_week.append(today - timedelta(days=d))
+    for d in range(today.isoweekday() , 7):
+        days_in_week.append(today + timedelta(days=d))
+
+    days_in_week.sort()
+    sum = 0
+
+    print("Calendar week %s" % today.isocalendar()[1])
+    print
+    for d in days_in_week:
+        s = d.strftime("%Y-%m-%d")
+        minutes = calculate_working_hours(find_date(db, s));
+        print("%s: %s" % (d.strftime("%a, %Y-%m-%d"), minutes_to_hours(minutes)))
+        sum += minutes
+
+    print
+    print("               = %s" % show_diff(sum, 5 * 8 * 60))
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    sub_parsers = parser.add_subparsers()
+    sub_parsers.add_parser('today').set_defaults(func=show_today)
+    sub_parsers.add_parser('start').set_defaults(func=set_start)
+    sub_parsers.add_parser('end').set_defaults(func=set_end)
+    sub_parsers.add_parser('break').set_defaults(func=add_break)
+    sub_parsers.add_parser('week').set_defaults(func=calc_week)
+
+    args = parser.parse_args()
+    args.func(args)
