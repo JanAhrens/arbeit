@@ -79,7 +79,7 @@ def show_date(date):
         if date["start"]:
             date["end"] = now()
             working_hours = calculate_working_hours(date)
-            print("Assuming you would end at %s you would have worked %s" % (date["end"], show_diff(working_hours, 8 * 60)))
+            print("So far %s" % show_diff(working_hours, 8 * 60))
 
 def show_diff(result, required):
     difference = result - required
