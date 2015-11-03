@@ -75,7 +75,11 @@ def show_date(date):
         working_hours = calculate_working_hours(date)
         print("= %s" % show_diff(working_hours, 8 * 60))
     else:
-        print("Duration not available. Date not yet finished.")
+        print("Duration not available.")
+        if date["start"]:
+            date["end"] = now()
+            working_hours = calculate_working_hours(date)
+            print("Assuming you would end at %s you would have worked %s" % (date["end"], show_diff(working_hours, 8 * 60)))
 
 def show_diff(result, required):
     difference = result - required
@@ -97,7 +101,7 @@ def set_time(time_field):
     db = load_db()
     d = find_date(db, today())
     if d[time_field]:
-        print colored('%s time already set to %s' % (time_field.title(), d[time_field]), 'red')
+        print(colored('%s time already set to %s' % (time_field.title(), d[time_field]), 'red'))
         exit(1)
     else:
         d[time_field] = now()
