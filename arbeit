@@ -74,12 +74,10 @@ def show_date(date):
     if finished(date):
         working_hours = calculate_working_hours(date)
         print("= %s" % show_diff(working_hours, 8 * 60))
-    else:
-        print("Duration not available.")
-        if date["start"]:
-            date["end"] = now()
-            working_hours = calculate_working_hours(date)
-            print("So far %s" % show_diff(working_hours, 8 * 60))
+    elif date["start"]:
+        date["end"] = now()
+        working_hours = calculate_working_hours(date)
+        print("So far %s" % show_diff(working_hours, 8 * 60))
 
 def show_diff(result, required):
     difference = result - required
@@ -117,7 +115,22 @@ def set_start(args):
     print("Okay, let's get started!")
 
 def add_break(args):
-    print(colored("Not yet implemented", "yellow"))
+    start = args.start[0]
+    end = args.end[0]
+    comment = args.comment
+
+    db = load_db()
+    d = find_date(db, today())
+
+    d["breaks"].append({
+        "start": start,
+        "end": end,
+        "comment": comment
+    })
+
+    replace_today(db, d)
+    write_db(db)
+    show_today(None)
 
 def calc_week(args):
     db = load_db()
@@ -150,8 +163,13 @@ if __name__ == '__main__':
     sub_parsers.add_parser('today').set_defaults(func=show_today)
     sub_parsers.add_parser('start').set_defaults(func=set_start)
     sub_parsers.add_parser('end').set_defaults(func=set_end)
-    sub_parsers.add_parser('break').set_defaults(func=add_break)
     sub_parsers.add_parser('week').set_defaults(func=calc_week)
+
+    break_parser = sub_parsers.add_parser('break')
+    break_parser.set_defaults(func=add_break)
+    break_parser.add_argument('start', nargs=1)
+    break_parser.add_argument('end', nargs=1)
+    break_parser.add_argument('comment', nargs='?')
 
     args = parser.parse_args()
     args.func(args)
