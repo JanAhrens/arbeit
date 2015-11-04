@@ -142,8 +142,8 @@ def calc_week(args):
 
     for d in range(0, today.isoweekday()):
         days_in_week.append(today - timedelta(days=d))
-    for d in range(today.isoweekday() , 7):
-        days_in_week.append(today + timedelta(days=d))
+    for d in range(today.isoweekday() + 1 , 6):
+        days_in_week.append(today + timedelta(days=d - today.isoweekday()))
 
     days_in_week.sort()
     sum = 0
