@@ -116,8 +116,11 @@ def set_start(args):
 
 def add_break(args):
     start = args.start[0]
-    end = args.end[0]
+    end = args.end
     comment = args.comment
+
+    if not end:
+        end = now()
 
     db = load_db()
     d = find_date(db, today())
@@ -168,7 +171,7 @@ if __name__ == '__main__':
     break_parser = sub_parsers.add_parser('break')
     break_parser.set_defaults(func=add_break)
     break_parser.add_argument('start', nargs=1)
-    break_parser.add_argument('end', nargs=1)
+    break_parser.add_argument('end', nargs='?')
     break_parser.add_argument('comment', nargs='?')
 
     args = parser.parse_args()
