@@ -102,7 +102,10 @@ def set_time(time_field):
         print(colored('%s time already set to %s' % (time_field.title(), d[time_field]), 'red'))
         exit(1)
     else:
-        d[time_field] = now()
+        if args.time:
+            d[time_field] = args.time
+        else:
+            d[time_field] = now()
     replace_today(db, d)
     write_db(db)
 
@@ -164,9 +167,15 @@ if __name__ == '__main__':
 
     sub_parsers = parser.add_subparsers()
     sub_parsers.add_parser('today').set_defaults(func=show_today)
-    sub_parsers.add_parser('start').set_defaults(func=set_start)
-    sub_parsers.add_parser('end').set_defaults(func=set_end)
     sub_parsers.add_parser('week').set_defaults(func=calc_week)
+
+    start_parser = sub_parsers.add_parser('start')
+    start_parser.set_defaults(func=set_start)
+    start_parser.add_argument('time', nargs='?')
+
+    end_parser = sub_parsers.add_parser('end')
+    end_parser.set_defaults(func=set_end)
+    end_parser.add_argument('time', nargs='?')
 
     break_parser = sub_parsers.add_parser('break')
     break_parser.set_defaults(func=add_break)
