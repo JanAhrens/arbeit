@@ -86,7 +86,7 @@ def show_diff(result, required):
         colored(minutes_to_hours(difference), 'green' if result > required else 'yellow')
     )
 
-def show_today(args):
+def show_today(args=None):
     db = load_db()
     print(time.strftime("%A, %d.%m.%Y"))
     print
@@ -95,26 +95,32 @@ def show_today(args):
 def now():
     return time.strftime("%H:%M")
 
-def set_time(time_field):
+def set_time(time_field, args):
     db = load_db()
     d = find_date(db, today())
     if d[time_field]:
-        print(colored('%s time already set to %s' % (time_field.title(), d[time_field]), 'red'))
-        exit(1)
-    else:
-        if args.time:
-            d[time_field] = args.time
+        if args.force:
+            print(colored('Overwriting previous %s time (was %s).' % (time_field, d[time_field]), 'yellow'))
         else:
-            d[time_field] = now()
+            print(colored('%s time already set to %s. Use "--force" to overwrite.' % (time_field.title(), d[time_field]), 'red'))
+            exit(1)
+
+    if args.time:
+        d[time_field] = args.time
+    else:
+        d[time_field] = now()
+
     replace_today(db, d)
     write_db(db)
 
+    show_today()
+
 def set_end(args):
-    set_time('end')
+    set_time('end', args)
     print("That's all for today. Have a nice evening!")
 
 def set_start(args):
-    set_time('start')
+    set_time('start', args)
     print("Okay, let's get started!")
 
 def add_break(args):
@@ -136,7 +142,7 @@ def add_break(args):
 
     replace_today(db, d)
     write_db(db)
-    show_today(None)
+    show_today()
 
 def calc_week(args):
     db = load_db()
@@ -172,10 +178,12 @@ if __name__ == '__main__':
     start_parser = sub_parsers.add_parser('start')
     start_parser.set_defaults(func=set_start)
     start_parser.add_argument('time', nargs='?')
+    start_parser.add_argument('-f', '--force', dest='force', default=False, action="store_true", help='Overwrite existing values')
 
     end_parser = sub_parsers.add_parser('end')
     end_parser.set_defaults(func=set_end)
     end_parser.add_argument('time', nargs='?')
+    end_parser.add_argument('-f', '--force', dest='force', default=False, action="store_true", help='Overwrite existing values')
 
     break_parser = sub_parsers.add_parser('break')
     break_parser.set_defaults(func=add_break)
