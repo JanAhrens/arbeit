@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""
+Log your working hours in a JSON file.
+"""
 
 import json
 import os
@@ -168,12 +171,60 @@ def calc_week(args):
     print
     print("               = %s" % show_diff(sum, 5 * 8 * 60))
 
+def calc_month(args):
+    # make the index directly indexable by having a fake first item
+    month_days_mapping = [None, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
+    db = load_db()
+
+    if args.month:
+        month = args.month
+    else:
+        month = date.today().month
+
+    if args.year:
+        year = args.year
+    else:
+        year = date.today().year
+
+    number_of_days_in_month = month_days_mapping[month]
+
+    working_days = 0
+    days_in_month = []
+    for day in range(1, number_of_days_in_month + 1):
+        d = date(year, month, day)
+        if d.isocalendar()[2] in range(1, 5 + 1):
+            working_days += 1
+        days_in_month.append(d)
+
+    sum = 0
+    current_month = days_in_month[0].isocalendar()[1]
+    print("Statistic for %s/%s" % (month, year))
+    print
+    for d in days_in_month:
+        isomonth = d.isocalendar()[1]
+        if current_month != isomonth:
+            print
+            current_month = isomonth
+        s = d.strftime("%Y-%m-%d")
+        minutes = calculate_working_hours(find_date(db, s));
+        print("%s: %s" % (d.strftime("%a, %Y-%m-%d"), minutes_to_hours(minutes)))
+        sum += minutes
+
+    print
+    print("               = %s" % show_diff(sum, working_days * 8 * 60))
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     sub_parsers = parser.add_subparsers()
     sub_parsers.add_parser('today').set_defaults(func=show_today)
     sub_parsers.add_parser('week').set_defaults(func=calc_week)
+
+    month_parser = sub_parsers.add_parser('month')
+    month_parser.set_defaults(func=calc_month)
+    month_parser.add_argument('month', nargs='?', type=int)
+    month_parser.add_argument('year', nargs='?', type=int)
 
     start_parser = sub_parsers.add_parser('start')
     start_parser.set_defaults(func=set_start)
