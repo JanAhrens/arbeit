@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-"""Log your working hours in a JSON file."""
-
 import json
 import os
 import time
@@ -55,9 +52,6 @@ def calculate_working_hours(date):
 
     return duration - breaks
 
-def finished(date):
-    return date["start"] and date["end"]
-
 def show_date(date):
     print(" Start: %s" % (date["start"] if date["start"] else colored("missing", "red")))
     print("   End: %s" % (date["end"] if date["end"] else colored("missing", "red")))
@@ -71,7 +65,7 @@ def show_date(date):
                 comment = ""
             print("  %s - %s%s" % (b["start"], b["end"], comment))
     print
-    if finished(date):
+    if date["start"] and date["end"]:
         working_hours = calculate_working_hours(date)
         print("= %s" % show_diff(working_hours, 8 * 60))
     elif date["start"]:
@@ -86,48 +80,28 @@ def show_diff(result, required):
         colored(minutes_to_hours(difference), 'green' if result > required else 'yellow')
     )
 
-def show_today(args=None):
-    db = load_db()
-    print(time.strftime("%A, %d.%m.%Y"))
-    print
-    show_date(find_date(db, today()))
-
 def now():
     return time.strftime("%H:%M")
 
-def set_time(time_field, args):
+def set_time(time_field, time, force):
     db = load_db()
     d = find_date(db, today())
     if d[time_field]:
-        if args.force:
+        if force:
             print(colored('Overwriting previous %s time (was %s).' % (time_field, d[time_field]), 'yellow'))
         else:
             print(colored('%s time already set to %s. Use "--force" to overwrite.' % (time_field.title(), d[time_field]), 'red'))
-            exit(1)
+            return
 
-    if args.time:
-        d[time_field] = args.time
+    if time:
+        d[time_field] = time
     else:
         d[time_field] = now()
 
     replace_today(db, d)
     write_db(db)
 
-    show_today()
-
-def set_end(args):
-    set_time('end', args)
-    print("That's all for today. Have a nice evening!")
-
-def set_start(args):
-    set_time('start', args)
-    print("Okay, let's get started!")
-
-def add_break(args):
-    start = args.start[0]
-    end = args.end
-    comment = args.comment
-
+def add_break(start, end, comment):
     if not end:
         end = now()
 
@@ -142,7 +116,6 @@ def add_break(args):
 
     replace_today(db, d)
     write_db(db)
-    show_today()
 
 def calc_week_data(db, calendar_week, year):
     days_in_week = days_in_calendar_week(calendar_week, year)
@@ -156,24 +129,6 @@ def calc_week_data(db, calendar_week, year):
         week_data["sum"] += item["minutes"]
 
     return week_data
-
-def calc_week(args):
-    db = load_db()
-
-    calendar_week = date.today().isocalendar()[1]
-    year = date.today().year
-
-    week_data = calc_week_data(db, calendar_week, year)
-
-    print("Calendar week %s" % calendar_week)
-    print
-    for item in week_data["days"]:
-        d = item["date"]
-        minutes = item["minutes"]
-        print("%s: %s" % (d.strftime("%a, %Y-%m-%d"), minutes_to_hours(minutes)))
-
-    print
-    print("               = %s" % show_diff(week_data["sum"], 5 * 8 * 60))
 
 def days_in_month(month):
     # make the index directly indexable by having a fake first item
@@ -192,41 +147,3 @@ def days_in_calendar_week(calendar_week, year):
         return d.isocalendar()[1] == calendar_week
 
     return filter(matching_calendar_week, days_in_year(year))
-
-def calc_month(args):
-    db = load_db()
-
-    if args.month:
-        month = args.month
-    else:
-        month = date.today().month
-
-    if args.year:
-        year = args.year
-    else:
-        year = date.today().year
-
-    working_days = 0
-    days = []
-    for day in range(1, days_in_month(month) + 1):
-        d = date(year, month, day)
-        if d.isocalendar()[2] in range(1, 5 + 1):
-            working_days += 1
-        days.append(d)
-
-    sum = 0
-    current_month = days[0].isocalendar()[1]
-    print("Statistic for %s/%s" % (month, year))
-    print
-    for d in days:
-        isomonth = d.isocalendar()[1]
-        if current_month != isomonth:
-            print
-            current_month = isomonth
-        s = d.strftime("%Y-%m-%d")
-        minutes = calculate_working_hours(find_date(db, s));
-        print("%s: %s" % (d.strftime("%a, %Y-%m-%d"), minutes_to_hours(minutes)))
-        sum += minutes
-
-    print
-    print("               = %s" % show_diff(sum, working_days * 8 * 60))

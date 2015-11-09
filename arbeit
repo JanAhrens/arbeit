@@ -1,22 +1,99 @@
 #!/usr/bin/env python
+"""Log your working hours in a JSON file."""
 
 from arbeitcli import *
 import argparse
+
+def today_cmd(args=None):
+    db = load_db()
+    print(time.strftime("%A, %d.%m.%Y"))
+    print
+    show_date(find_date(db, today()))
+
+def calc_week(args):
+    db = load_db()
+
+    calendar_week = date.today().isocalendar()[1]
+    year = date.today().year
+
+    week_data = calc_week_data(db, calendar_week, year)
+
+    print("Calendar week %s" % calendar_week)
+    print
+    for item in week_data["days"]:
+        d = item["date"]
+        minutes = item["minutes"]
+        print("%s: %s" % (d.strftime("%a, %Y-%m-%d"), minutes_to_hours(minutes)))
+
+    print
+    print("               = %s" % show_diff(week_data["sum"], 5 * 8 * 60))
+
+def set_end(args):
+    set_time('end', args.time, args.force)
+    today_cmd()
+    print("That's all for today. Have a nice evening!")
+
+def start_cmd(args):
+    set_time('start', args.time, args.force)
+    today_cmd()
+    print("Okay, let's get started!")
+
+def add_break_cmd(args):
+    add_break(args.start[0], args.end, args.comment)
+    today_cmd()
+
+def month_cmd(args):
+    db = load_db()
+
+    if args.month:
+        month = args.month
+    else:
+        month = date.today().month
+
+    if args.year:
+        year = args.year
+    else:
+        year = date.today().year
+
+    working_days = 0
+    days = []
+    for day in range(1, days_in_month(month) + 1):
+        d = date(year, month, day)
+        if d.isocalendar()[2] in range(1, 5 + 1):
+            working_days += 1
+        days.append(d)
+
+    sum = 0
+    current_month = days[0].isocalendar()[1]
+    print("Statistic for %s/%s" % (month, year))
+    print
+    for d in days:
+        isomonth = d.isocalendar()[1]
+        if current_month != isomonth:
+            print
+            current_month = isomonth
+        s = d.strftime("%Y-%m-%d")
+        minutes = calculate_working_hours(find_date(db, s));
+        print("%s: %s" % (d.strftime("%a, %Y-%m-%d"), minutes_to_hours(minutes)))
+        sum += minutes
+
+    print
+    print("               = %s" % show_diff(sum, working_days * 8 * 60))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     sub_parsers = parser.add_subparsers()
-    sub_parsers.add_parser('today').set_defaults(func=show_today)
+    sub_parsers.add_parser('today').set_defaults(func=today_cmd)
     sub_parsers.add_parser('week').set_defaults(func=calc_week)
 
     month_parser = sub_parsers.add_parser('month')
-    month_parser.set_defaults(func=calc_month)
+    month_parser.set_defaults(func=month_cmd)
     month_parser.add_argument('month', nargs='?', type=int)
     month_parser.add_argument('year', nargs='?', type=int)
 
     start_parser = sub_parsers.add_parser('start')
-    start_parser.set_defaults(func=set_start)
+    start_parser.set_defaults(func=start_cmd)
     start_parser.add_argument('time', nargs='?')
     start_parser.add_argument('-f', '--force',
                               dest='force',
@@ -34,7 +111,7 @@ if __name__ == '__main__':
                             help='Overwrite existing values')
 
     break_parser = sub_parsers.add_parser('break')
-    break_parser.set_defaults(func=add_break)
+    break_parser.set_defaults(func=add_break_cmd)
     break_parser.add_argument('start', nargs=1)
     break_parser.add_argument('end', nargs='?')
     break_parser.add_argument('comment', nargs='?')
