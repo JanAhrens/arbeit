@@ -146,4 +146,4 @@ def days_in_calendar_week(calendar_week, year):
     def matching_calendar_week(d):
         return d.isocalendar()[1] == calendar_week
 
-    return filter(matching_calendar_week, days_in_year(year))
+    return list(filter(matching_calendar_week, days_in_year(year)))

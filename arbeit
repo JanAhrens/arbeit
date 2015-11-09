@@ -10,7 +10,7 @@ def today_cmd(args=None):
     print
     show_date(find_date(db, today()))
 
-def calc_week(args):
+def week_cmd(args):
     db = load_db()
 
     calendar_week = date.today().isocalendar()[1]
@@ -28,7 +28,7 @@ def calc_week(args):
     print
     print("               = %s" % show_diff(week_data["sum"], 5 * 8 * 60))
 
-def set_end(args):
+def end_cmd(args):
     set_time('end', args.time, args.force)
     today_cmd()
     print("That's all for today. Have a nice evening!")
@@ -38,7 +38,7 @@ def start_cmd(args):
     today_cmd()
     print("Okay, let's get started!")
 
-def add_break_cmd(args):
+def break_cmd(args):
     add_break(args.start[0], args.end, args.comment)
     today_cmd()
 
@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
     sub_parsers = parser.add_subparsers()
     sub_parsers.add_parser('today').set_defaults(func=today_cmd)
-    sub_parsers.add_parser('week').set_defaults(func=calc_week)
+    sub_parsers.add_parser('week').set_defaults(func=week_cmd)
 
     month_parser = sub_parsers.add_parser('month')
     month_parser.set_defaults(func=month_cmd)
@@ -102,7 +102,7 @@ if __name__ == '__main__':
                               help='Overwrite existing values')
 
     end_parser = sub_parsers.add_parser('end')
-    end_parser.set_defaults(func=set_end)
+    end_parser.set_defaults(func=end_cmd)
     end_parser.add_argument('time', nargs='?')
     end_parser.add_argument('-f', '--force',
                             dest='force',
@@ -111,7 +111,7 @@ if __name__ == '__main__':
                             help='Overwrite existing values')
 
     break_parser = sub_parsers.add_parser('break')
-    break_parser.set_defaults(func=add_break_cmd)
+    break_parser.set_defaults(func=break_cmd)
     break_parser.add_argument('start', nargs=1)
     break_parser.add_argument('end', nargs='?')
     break_parser.add_argument('comment', nargs='?')
