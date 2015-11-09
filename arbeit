@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""
-Log your working hours in a JSON file.
-"""
+"""Log your working hours in a JSON file."""
 
 import json
 import os
