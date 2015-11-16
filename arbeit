@@ -3,6 +3,7 @@
 
 from arbeitcli import *
 import argparse
+import sys
 
 def today_cmd(args=None):
     db = load_db()
@@ -116,5 +117,8 @@ if __name__ == '__main__':
     break_parser.add_argument('end', nargs='?')
     break_parser.add_argument('comment', nargs='?')
 
-    args = parser.parse_args()
+    if (len(sys.argv) < 2):
+      args = parser.parse_args(['today'])
+    else:
+      args = parser.parse_args()
     args.func(args)
